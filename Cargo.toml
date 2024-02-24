@@ -1,0 +1,9 @@
+[package]
+name = "valo-vc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+global-hotkey = "0.4.2"
+rodio = "0.17.3"
+winit = "0.29.10"
