@@ -1,7 +1,3 @@
-// Copyright 2022-2022 Tauri Programme within The Commons Conservancy
-// SPDX-License-Identifier: Apache-2.0
-// SPDX-License-Identifier: MIT
-
 use global_hotkey::{
     hotkey::{Code, HotKey, Modifiers},
     GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState,
@@ -33,10 +29,34 @@ fn main() {
 }
 
 fn run(device: &str) {
+    let hotkey_list = [
+        Code::Digit1,
+        Code::Digit2,
+        Code::Digit3,
+        Code::Digit4,
+        Code::Digit5,
+        Code::Digit6,
+        Code::Digit7,
+        Code::Digit8,
+        Code::Digit9,
+        Code::Digit0,
+    ];
+    let audio_path = (0..10)
+        .map(|i| format!("audio/{}.wav", i))
+        .collect::<Vec<_>>();
+    let mut hotkeys = vec![];
+
     let event_loop = EventLoopBuilder::new().build().unwrap();
     let hotkeys_manager = GlobalHotKeyManager::new().unwrap();
-    let hotkey = HotKey::new(Some(Modifiers::SHIFT | Modifiers::CONTROL), Code::KeyD);
-    hotkeys_manager.register(hotkey).unwrap();
+    for i in 0..hotkey_list.len() {
+        hotkeys.push(HotKey::new(
+            Some(Modifiers::SHIFT | Modifiers::CONTROL),
+            hotkey_list[i],
+        ));
+        if let Err(err) = hotkeys_manager.register(hotkeys[i]) {
+            eprintln!("Failed to register hotkey: {:?}", err);
+        }
+    }
 
     let global_hotkey_channel = GlobalHotKeyEvent::receiver();
 
@@ -45,10 +65,12 @@ fn run(device: &str) {
             event_loop.set_control_flow(ControlFlow::Poll);
 
             if let Ok(event) = global_hotkey_channel.try_recv() {
-                if hotkey.id() == event.id && event.state == HotKeyState::Released {
-                    hotkeys_manager.unregister(hotkey).unwrap();
-                    play("audio/sample.wav", device); //スピーカー (2- Logitech G733 Gaming Headset)
-                    hotkeys_manager.register(hotkey).unwrap();
+                for i in 0..10 {
+                    if hotkeys[i].id() == event.id && event.state == HotKeyState::Released {
+                        hotkeys_manager.unregister(hotkeys[i]).unwrap();
+                        play(audio_path[i].as_str(), device);
+                        hotkeys_manager.register(hotkeys[i]).unwrap();
+                    }
                 }
             }
         })
@@ -65,6 +87,7 @@ fn play(path: &str, device_name: &str) {
 
     let (_stream, handle) = OutputStream::try_from_device(&device).unwrap();
     let sink = rodio::Sink::try_new(&handle).unwrap();
+    println!("{}", path);
 
     let file = std::fs::File::open(path).unwrap();
     let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
