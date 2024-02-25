@@ -27,7 +27,7 @@ fn main() {
         }
         break;
     }
-    println!("\nホットキーはCONTROL + SHIFT + D\n終了はウィンドウ内でCTRL + C");
+    println!("\nホットキーはCONTROL + SHIFT + 1 ~ 0\n終了はウィンドウ内でCTRL + C");
 
     run(&device_names[input - 1]);
 }
