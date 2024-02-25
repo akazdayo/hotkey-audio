@@ -33,7 +33,6 @@ fn main() {
 }
 
 fn run(device: &str) {
-    let hotkey_num = read_dir("./audio/".to_string()).len();
     let hotkey_list = [
         Code::Digit1,
         Code::Digit2,
@@ -46,14 +45,22 @@ fn run(device: &str) {
         Code::Digit9,
         Code::Digit0,
     ];
-    let audio_path = (0..hotkey_num)
-        .map(|i| format!("audio/{}.wav", i))
-        .collect::<Vec<_>>();
     let mut hotkeys = vec![];
+    let files = read_dir("./audio/".to_string());
+
+    if files.len() > 10 {
+        println!("エラー 11個以上のファイルを追加することは出来ません。");
+        get_input();
+        return;
+    } else if files.len() < 1 {
+        println!("エラー audio/に1つ以上のファイルを追加してください。");
+        get_input();
+        return;
+    }
 
     let event_loop = EventLoopBuilder::new().build().unwrap();
     let hotkeys_manager = GlobalHotKeyManager::new().unwrap();
-    for i in 0..hotkey_num {
+    for i in 0..files.len() {
         hotkeys.push(HotKey::new(
             Some(Modifiers::SHIFT | Modifiers::CONTROL),
             hotkey_list[i],
@@ -70,10 +77,10 @@ fn run(device: &str) {
             event_loop.set_control_flow(ControlFlow::Poll);
 
             if let Ok(event) = global_hotkey_channel.try_recv() {
-                for i in 0..hotkey_num {
+                for i in 0..files.len() {
                     if hotkeys[i].id() == event.id && event.state == HotKeyState::Released {
                         hotkeys_manager.unregister(hotkeys[i]).unwrap();
-                        play(audio_path[i].as_str(), device);
+                        play(files[i].to_str().unwrap(), device);
                         hotkeys_manager.register(hotkeys[i]).unwrap();
                     }
                 }
