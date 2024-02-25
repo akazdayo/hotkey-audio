@@ -6,11 +6,11 @@ use global_hotkey::{
     hotkey::{Code, HotKey, Modifiers},
     GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState,
 };
-
-use rodio::cpal::traits::{DeviceTrait, HostTrait};
-use rodio::OutputStream;
-use std::io;
-use std::io::BufReader;
+use rodio::{
+    cpal::traits::{DeviceTrait, HostTrait},
+    OutputStream,
+};
+use std::{io, io::BufReader, path, path::PathBuf};
 use winit::event_loop::{ControlFlow, EventLoopBuilder};
 
 fn main() {
@@ -33,6 +33,7 @@ fn main() {
 }
 
 fn run(device: &str) {
+    let hotkey_num = read_dir("./audio/".to_string()).len();
     let hotkey_list = [
         Code::Digit1,
         Code::Digit2,
@@ -45,14 +46,14 @@ fn run(device: &str) {
         Code::Digit9,
         Code::Digit0,
     ];
-    let audio_path = (0..10)
+    let audio_path = (0..hotkey_num)
         .map(|i| format!("audio/{}.wav", i))
         .collect::<Vec<_>>();
     let mut hotkeys = vec![];
 
     let event_loop = EventLoopBuilder::new().build().unwrap();
     let hotkeys_manager = GlobalHotKeyManager::new().unwrap();
-    for i in 0..hotkey_list.len() {
+    for i in 0..hotkey_num {
         hotkeys.push(HotKey::new(
             Some(Modifiers::SHIFT | Modifiers::CONTROL),
             hotkey_list[i],
@@ -69,7 +70,7 @@ fn run(device: &str) {
             event_loop.set_control_flow(ControlFlow::Poll);
 
             if let Ok(event) = global_hotkey_channel.try_recv() {
-                for i in 0..10 {
+                for i in 0..hotkey_num {
                     if hotkeys[i].id() == event.id && event.state == HotKeyState::Released {
                         hotkeys_manager.unregister(hotkeys[i]).unwrap();
                         play(audio_path[i].as_str(), device);
@@ -120,4 +121,15 @@ fn get_input() -> String {
     let mut word = String::new();
     io::stdin().read_line(&mut word).ok();
     return word.trim().to_string();
+}
+
+fn read_dir(path: String) -> Vec<PathBuf> {
+    let target = path::PathBuf::from(path);
+    let files = target.read_dir().expect("このパスは存在しません");
+    let mut paths: Vec<PathBuf> = Vec::new();
+    for x in files {
+        let path = x.unwrap().path();
+        paths.push(path);
+    }
+    return paths;
 }
